@@ -36,6 +36,14 @@ def generate_ngrams(noteSeq, ngram=1):
         ans.append(n)
     return ans
 
+'''
+A feature string of a sequence of notes is made from the characters {R, U, W, D, B}.:
+    R denotes a repeated note
+    U denotes an ascending small interval 
+    W denotes an ascending large interval
+    D denotes a descending small interval
+    B denotes a descending large interval
+'''
 def generate_feature_string(intervalSeq):
     s = '' #empty string
     for interval in intervalSeq:
@@ -157,18 +165,26 @@ for makamName in makamNames:
 
     #fixme:
     sortedFeatureHistogram = {}
+    onlyMostCommon = True
+    mostCommonCnt = 20
     for ngLen in featureStrDict:
         entryCount = 0
         for key, value in reversed(sorted(featureStrDict[ngLen].items(), key = lambda item: item[1])):
             entryCount += 1
-            if entryCount > 15:
-                break
+            # to only keep entries above this count:
+            if onlyMostCommon:
+                if entryCount > mostCommonCnt:
+                    break
             if ngLen not in sortedFeatureHistogram:
                 sortedFeatureHistogram[ngLen] = {}
             sortedFeatureHistogram[ngLen][key] = value
             #print("-- {}: {}".format(key, value))
     
-    jsonFile = "{}_ngrams.json".format(makamName)
+    if onlyMostCommon:
+        versionStr = '_above{}'.format(mostCommonCnt)
+    else:
+        versionStr = ''
+    jsonFile = "{}_ngrams{}.json".format(makamName, versionStr)
     jsonPath = os.path.join(jsonDir, jsonFile) 
     with open(jsonPath, "w") as outfile:
         json.dump(sortedFeatureHistogram, outfile, indent=4)
