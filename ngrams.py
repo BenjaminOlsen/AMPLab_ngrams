@@ -5,7 +5,7 @@ import json
 import music21 as M
 import numpy as np
 import xml.etree.ElementTree as ET
-
+print("WELCOME")
 # turkish makam scores:
 xmlDir = 'SymbTr/MusicXML'
 noKeySigDir = os.path.join(xmlDir, 'noKeySig')
@@ -15,8 +15,8 @@ if not os.path.exists(noKeySigDir):
     os.makedirs(noKeySigDir)
 
 #change to noKeySigDir if you already made the no key sig xmls
-#fileDir = xmlDir 
-fileDir = noKeySigDir
+fileDir = xmlDir 
+#fileDir = noKeySigDir
 
 fileList = [f for f in os.listdir(fileDir) if os.path.isfile(os.path.join(fileDir, f))]
 print("file list: length {}".format(len(fileList)))
@@ -130,12 +130,12 @@ for makamName in makamNames:
     fileCnt = 0 
     for f in fileList:
         path = os.path.join(fileDir, f)
-        print("reading file {}/{}: {}".format(fileCnt, totFileCnt, f))
+        #print("reading file {}/{}: {}".format(fileCnt, totFileCnt, f))
 
         # just analyze one makam at a time
         if f.split('--')[0] != makamName: 
             fileCnt += 1
-            print("skipping {}".format(f))
+            #print("skipping {}".format(f))
             continue
 
         print("analyzing {}".format(f))
@@ -180,7 +180,7 @@ for makamName in makamNames:
             except Exception as e:
                 print("error parsing {}: {}".format(newPath, e.args))
        
-            print("accidentals:::::: {}".format(accidentals))
+            print("accidentals in xml::::::: {}".format(accidentals))
         # list elements in score:
         #print('This score contains these {} elements'.format(len(s.elements)))
         #for element in s.elements:
@@ -221,6 +221,7 @@ for makamName in makamNames:
             nextNote = note.next()
             #print("note: {}, next: {}, interval: {}".format(note, nextNote, M.interval.Interval(note, nextNote).cents) )
             intervalList.append(M.interval.Interval(note, nextNote).cents)
+        
         print(accidentalDict)
 
         # create ngrams and feature string histogram
@@ -245,9 +246,9 @@ for makamName in makamNames:
 
     #fixme:
     sortedFeatureHistogram = {}
-    onlyMostCommon = True
+    onlyMostCommon = False
     doNormalize = False
-    doCombineRotations = False 
+    doCombineRotations = True 
      
     #TODO sum all values -> normalize
 
@@ -256,24 +257,29 @@ for makamName in makamNames:
         entryCount = 0
         reversedAndSorted = reversed(sorted(featureStrDict[ngLen].items(), key = lambda item: item[1])) 
         for key, value in reversedAndSorted:
-            
+            # key: feature string
+            # value: how many times the feat. str. appears in the piece
+            insertThisFeatureStr = True 
             if doCombineRotations:
                 for key2, value2 in reversedAndSorted:
                     if are_rotations(key, key2):
-                        value += value2
-                        #remove key2 from reversedAndSorted
-                        del reversedAndSorted[key2]
-                        print("rotation!: {} -- {}: {}+{}={}".format(key, key2, value-value2, value2, value))
+                        # dont add the values, dont do this:
+                        # value += value2
 
-            entryCount += 1
-            # to only keep entries above this count:
-            if onlyMostCommon:
-                if entryCount > mostCommonCnt:
-                    break
-            if ngLen not in sortedFeatureHistogram:
-                sortedFeatureHistogram[ngLen] = {}
-            sortedFeatureHistogram[ngLen][key] = value
-            #print("-- {}: {}".format(key, value))
+                        insertThisFeatureStr = False
+                        print("rotation!: {} -- {}: {}+{}={}".format(key, key2, value-value2, value2, value))
+    
+
+            if insertThisFeatureStr:
+                entryCount += 1
+                # to only keep entries above this count:
+                if onlyMostCommon:
+                    if entryCount > mostCommonCnt:
+                        break
+                if ngLen not in sortedFeatureHistogram:
+                    sortedFeatureHistogram[ngLen] = {}
+                sortedFeatureHistogram[ngLen][key] = value
+                #print("-- {}: {}".format(key, value))
     
     versionStr = ''
     if onlyMostCommon:
