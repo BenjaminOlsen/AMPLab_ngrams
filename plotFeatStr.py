@@ -28,7 +28,7 @@ def decodeFeatureString(str):
         seq[idx+1] = prev + val
         prev = seq[idx+1]
 
-    print("decode: {} -> {}".format(str, seq))
+   # print("decode: {} -> {}".format(str, seq))
     return seq
 
 def makePlotOfJson(jsonPath):
@@ -41,17 +41,17 @@ def makePlotOfJson(jsonPath):
     for idx, (ngramLength, sequenceDict) in enumerate(data.items()):
         print("~~~~~~~~~~~~~~~~~~~~~")
         print("ngram length: {}".format(ngramLength))
+        totalCount = sum(sequenceDict.values())
         maxCount = max(sequenceDict.values())
         for seq, count in sequenceDict.items():
-            print("seq: {}; count: {}".format(seq, count))
+            weight = float(count)/maxCount
+            alpha = weight * weight 
 
-            prominence = float(count)/maxCount
-            alpha = prominence * prominence 
-
+            print("seq: {}; count: {}; weight: {:.4f}".format(seq, count, weight))
             y = decodeFeatureString(seq)
             x = np.arange(len(y))
-            plt.plot(x, y, linewidth=prominence, alpha=alpha)
-        plt.title("{}: n-gram length {}".format(basename(jsonPath), ngramLength))
+            plt.plot(x, y, linewidth=weight, alpha=alpha)
+        plt.title("{}\n{}-gram; N={}".format(basename(jsonPath), ngramLength, totalCount))
         plt.tight_layout()
         fileStr = 'featureStr_length{}_{}.png'.format(ngramLength, basename(jsonPath))
         plt.savefig(fileStr)
