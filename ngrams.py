@@ -57,16 +57,21 @@ def generate_interval_ngrams(intervalInfoSequence, ngram=1):
 # takes intervalInfo list
 # return list of ngrams of feature strings
 def generate_featurestring_ngram(intervalInfoSequence, ngram=1):
-    featureCharList = []
     for intervalInfo in intervalInfoSequence:
         interval = intervalInfo["interval"]
         featureChar = getFeatureChar(interval)
-        featureCharList.append(featureChar)
-    temp = zip(*[featureCharList[i:] for i in range(0,ngram)])
-    ans = []
-    for n in temp:
-        ans.append(n)
-    return ans
+        intervalInfo['featureChar'] = featureChar
+    temp = zip(*[intervalInfoSequence[i:] for i in range(0,ngram)])
+    charList = []
+    noteList = []
+    intervalList = []
+    for ngram in temp:
+        for info in ngram:
+            #print(info)
+            charList.append(info['featureChar'])
+            noteList.append(info['startNote'])
+            intervalList.append(info['interval'])
+    return (charList, noteList, intervalList) 
 
 def are_rotations(str1, str2):
     if len(str1) != len(str2):
@@ -136,8 +141,8 @@ def getFeatureChar(interval):
         return("X")
     
 # analyze only these makam names:
-#makamNames = ['rast', 'acemasiran', 'acemkurdi', 'beyati', 'buselik', 'hicaz', 'huseyni', 'huzzam', 'kurdilihicazkar', 'nihavent']
-makamNames = ['rast']
+makamNames = ['rast', 'acemasiran', 'acemkurdi', 'beyati', 'buselik', 'hicaz', 'huseyni', 'huzzam', 'kurdilihicazkar', 'nihavent']
+#makamNames = ['rast']
 
 # DERIVE From music21.note mutherfucker
 #class makamNote(M.note):
@@ -255,7 +260,8 @@ for makamName in makamNames:
         
         #print(accidentalDict)
 
-        def convertNgramToStr(ng):
+        # converts a list to str
+        def convertListToStr(ng):
             s = ""
             for ch in ng:
                 s += ch
@@ -266,10 +272,13 @@ for makamName in makamNames:
             #print("finding ngrams of length {}".format(ngramLength))
 
             # create ngrams of feature strings:
-            ngs = generate_featurestring_ngram(intervalInfoList, ngramLength)
-            #print("ngrams : {}".format(ngs))
-            for ng in ngs:
-                featureStr = convertNgramToStr(ng) 
+            (charList, noteList, intervalList) = generate_featurestring_ngram(intervalInfoList, ngramLength)
+            print("found: {} ngrams ({}-{}-{})".format(len(charList), len(charList), len(noteList), len(intervalList)))
+
+
+            #sum the occurance of each n-gram
+            for idx, ng in enumerate(charList):
+                featureStr = convertListToStr(ng) 
                 if ngramLength not in featureStrDict:
                     featureStrDict[ngramLength] = {}
                 if featureStr not in featureStrDict[ngramLength]:
