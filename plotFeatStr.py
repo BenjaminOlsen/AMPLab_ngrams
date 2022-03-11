@@ -54,7 +54,9 @@ def makePlotOfJson(jsonPath):
         plt.title("{}\n{}-gram; N={}".format(basename(jsonPath), ngramLength, totalCount))
         plt.tight_layout()
         fileStr = 'featureStr_length{}_{}.png'.format(ngramLength, basename(jsonPath))
-        plt.savefig(fileStr)
+        pngFolder = 'png'
+        filePath = join(pngFolder, fileStr)
+        plt.savefig(filePath)
         plt.clf()
         print('saved {}'.format(fileStr))
 
