@@ -42,13 +42,27 @@ fileCnt = 1
 #
 
 # returns list of ngrams of precise interval sizes
-def generate_ngrams(intervalInfoSequence, ngram=1):
+def generate_interval_ngrams(intervalInfoSequence, ngram=1):
     #TODO: initialize to proper size
     intervalSeq = []
     for intervalInfo in intervalInfoSequence:
         interval = intervalInfo["interval"]
         intervalSeq.append(interval)
     temp = zip(*[intervalSeq[i:] for i in range(0,ngram)])
+    ans = []
+    for n in temp:
+        ans.append(n)
+    return ans
+
+# takes intervalInfo list
+# return list of ngrams of feature strings
+def generate_featurestring_ngram(intervalInfoSequence, ngram=1):
+    featureCharList = []
+    for intervalInfo in intervalInfoSequence:
+        interval = intervalInfo["interval"]
+        featureChar = getFeatureChar(interval)
+        featureCharList.append(featureChar)
+    temp = zip(*[featureCharList[i:] for i in range(0,ngram)])
     ans = []
     for n in temp:
         ans.append(n)
@@ -98,24 +112,29 @@ A feature string of a sequence of notes is made from the characters {R, U, W, D,
     D denotes a descending small interval
     B denotes a descending large interval
 '''
-def generate_feature_string(intervalSeq):
+def generate_feature_string(intervalInfoSeq):
+    #    intervalInfoSequence contains { "interval": <cents, float>, "note": <music21.note>}
     s = '' #empty string
-    for interval in intervalSeq:
-        if interval <= 1 and interval >= -1:
-            s += 'R'
-        elif interval <= 300 and interval >= 10:
-            s += 'U'
-        elif interval > 300:
-            s += 'W'
-        elif interval >= -300 and interval < -1:
-            s += 'D'
-        elif interval < -300:
-            s += 'B'
-        else:
-            print("shouldnt get here")
-    
+    for intervalInfo in intervalInfoSeq:
+        interval = intervalInfo["interval"]
+        s += getFeatureChar(interval)
     return s
 
+def getFeatureChar(interval):
+    if interval <= 1 and interval >= -1:
+        return 'R'
+    elif interval <= 300 and interval >= 10:
+        return 'U'
+    elif interval > 300:
+        return 'W'
+    elif interval >= -300 and interval < -1:
+        return  'D'
+    elif interval < -300:
+        return 'B'
+    else:
+        print("getFeatureChar shouldnt get here")
+        return("X")
+    
 # analyze only these makam names:
 #makamNames = ['rast', 'acemasiran', 'acemkurdi', 'beyati', 'buselik', 'hicaz', 'huseyni', 'huzzam', 'kurdilihicazkar', 'nihavent']
 makamNames = ['rast']
@@ -236,14 +255,21 @@ for makamName in makamNames:
         
         #print(accidentalDict)
 
+        def convertNgramToStr(ng):
+            s = ""
+            for ch in ng:
+                s += ch
+            return s
+
         # create ngrams and feature string histogram
         for ngramLength in range(3,16):
             #print("finding ngrams of length {}".format(ngramLength))
-            ngs = generate_ngrams(intervalInfoList, ngramLength)
+
+            # create ngrams of feature strings:
+            ngs = generate_featurestring_ngram(intervalInfoList, ngramLength)
             #print("ngrams : {}".format(ngs))
             for ng in ngs:
-                featureStr = generate_feature_string(ng)
-                #print(featureStr)
+                featureStr = convertNgramToStr(ng) 
                 if ngramLength not in featureStrDict:
                     featureStrDict[ngramLength] = {}
                 if featureStr not in featureStrDict[ngramLength]:
@@ -265,7 +291,7 @@ for makamName in makamNames:
      
     #TODO sum all values -> normalize
 
-    mostCommonCnt = 400
+    mostCommonCnt = 500
     for ngLen in featureStrDict:
         startTime = timer()
         entryCount = 0
@@ -299,7 +325,7 @@ for makamName in makamNames:
     
     versionStr = ''
     if onlyMostCommon:
-        versionStr += '_above{}'.format(mostCommonCnt)
+        versionStr += '_top{}'.format(mostCommonCnt)
     if doCombineRotations:
         versionStr += '_no_redundant'
 
