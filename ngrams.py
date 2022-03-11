@@ -2,6 +2,8 @@
 
 import os
 import json
+from timeit import default_timer as timer
+from datetime import timedelta
 import music21 as M
 import numpy as np
 import xml.etree.ElementTree as ET
@@ -39,8 +41,14 @@ fileCnt = 1
 #        "slash-flat": -(4*tone/9),
 #
 
-def generate_ngrams(noteSeq, ngram=1):
-    temp = zip(*[noteSeq[i:] for i in range(0,ngram)])
+# returns list of ngrams of precise interval sizes
+def generate_ngrams(intervalInfoSequence, ngram=1):
+    #TODO: initialize to proper size
+    intervalSeq = []
+    for intervalInfo in intervalInfoSequence:
+        interval = intervalInfo["interval"]
+        intervalSeq.append(interval)
+    temp = zip(*[intervalSeq[i:] for i in range(0,ngram)])
     ans = []
     for n in temp:
         ans.append(n)
@@ -109,8 +117,8 @@ def generate_feature_string(intervalSeq):
     return s
 
 # analyze only these makam names:
-makamNames = ['rast', 'acemasiran', 'acemkurdi', 'beyati', 'buselik', 'hicaz', 'huseyni', 'huzzam', 'kurdilihicazkar', 'nihavent']
-#makamNames = ['huzzam']
+#makamNames = ['rast', 'acemasiran', 'acemkurdi', 'beyati', 'buselik', 'hicaz', 'huseyni', 'huzzam', 'kurdilihicazkar', 'nihavent']
+makamNames = ['rast']
 
 # DERIVE From music21.note mutherfucker
 #class makamNote(M.note):
@@ -208,7 +216,7 @@ for makamName in makamNames:
             #elif n.whateverfuckinmetadata:
             #    n.pitch.microtone = alterDict[n.pitch.accidental.name]
 
-        intervalList = []
+        intervalInfoList = []
         for note in allNotes:
             if note.pitch.accidental:
                 accName = note.pitch.accidental
@@ -220,14 +228,19 @@ for makamName in makamNames:
             ### test
             nextNote = note.next()
             #print("note: {}, next: {}, interval: {}".format(note, nextNote, M.interval.Interval(note, nextNote).cents) )
-            intervalList.append(M.interval.Interval(note, nextNote).cents)
+
+            #store the interval and the position (offset) in the score of the interval together
+            intervalInCents = M.interval.Interval(note, nextNote).cents
+            intervalInfo = {"interval": intervalInCents, "startNote": note}
+            intervalInfoList.append(intervalInfo)
         
         #print(accidentalDict)
 
         # create ngrams and feature string histogram
         for ngramLength in range(3,16):
             #print("finding ngrams of length {}".format(ngramLength))
-            ngs = generate_ngrams(intervalList, ngramLength)
+            ngs = generate_ngrams(intervalInfoList, ngramLength)
+            #print("ngrams : {}".format(ngs))
             for ng in ngs:
                 featureStr = generate_feature_string(ng)
                 #print(featureStr)
@@ -246,14 +259,15 @@ for makamName in makamNames:
 
     #fixme:
     sortedFeatureHistogram = {}
-    onlyMostCommon = False
+    onlyMostCommon = True 
     doNormalize = False
     doCombineRotations = True 
      
     #TODO sum all values -> normalize
 
-    mostCommonCnt = 20
+    mostCommonCnt = 400
     for ngLen in featureStrDict:
+        startTime = timer()
         entryCount = 0
         reversedAndSorted = sorted(featureStrDict[ngLen].items(), key = lambda item: item[1], reverse=True)
         rotationCnt = 0
@@ -278,7 +292,9 @@ for makamName in makamNames:
             if ngLen not in sortedFeatureHistogram:
                 sortedFeatureHistogram[ngLen] = {}
             sortedFeatureHistogram[ngLen][key] = value
-        print("Length {}: removed {} / accepted {} feature strings for rotation".format(ngLen, rotationCnt, entryCount))
+        endTime = timer ()
+        elapsedTime = timedelta(seconds=endTime-startTime)
+        print("Length {}: removed {} / accepted {} feature strings for rotation in {}".format(ngLen, rotationCnt, entryCount, elapsedTime))
             #print("-- {}: {}".format(key, value))
     
     versionStr = ''
