@@ -222,10 +222,10 @@ for makamName in makamNames:
             #print("note: {}, next: {}, interval: {}".format(note, nextNote, M.interval.Interval(note, nextNote).cents) )
             intervalList.append(M.interval.Interval(note, nextNote).cents)
         
-        print(accidentalDict)
+        #print(accidentalDict)
 
         # create ngrams and feature string histogram
-        for ngramLength in range(3,15):
+        for ngramLength in range(3,16):
             #print("finding ngrams of length {}".format(ngramLength))
             ngs = generate_ngrams(intervalList, ngramLength)
             for ng in ngs:
@@ -255,31 +255,31 @@ for makamName in makamNames:
     mostCommonCnt = 20
     for ngLen in featureStrDict:
         entryCount = 0
-        reversedAndSorted = reversed(sorted(featureStrDict[ngLen].items(), key = lambda item: item[1])) 
+        reversedAndSorted = sorted(featureStrDict[ngLen].items(), key = lambda item: item[1], reverse=True)
+        rotationCnt = 0
         for key, value in reversedAndSorted:
             # key: feature string
             # value: how many times the feat. str. appears in the piece
-            insertThisFeatureStr = True 
+             
             if doCombineRotations:
                 for key2, value2 in reversedAndSorted:
                     if are_rotations(key, key2):
                         # dont add the values, dont do this:
                         # value += value2
+                        reversedAndSorted.remove((key2,value2))
+                        rotationCnt += 1
+                        #print("rotation!: {} -- {}: {}+{}={}".format(key, key2, value-value2, value2, value))
 
-                        insertThisFeatureStr = False
-                        print("rotation!: {} -- {}: {}+{}={}".format(key, key2, value-value2, value2, value))
-    
-
-            if insertThisFeatureStr:
-                entryCount += 1
-                # to only keep entries above this count:
-                if onlyMostCommon:
-                    if entryCount > mostCommonCnt:
-                        break
-                if ngLen not in sortedFeatureHistogram:
-                    sortedFeatureHistogram[ngLen] = {}
-                sortedFeatureHistogram[ngLen][key] = value
-                #print("-- {}: {}".format(key, value))
+            entryCount += 1
+            # to only keep entries above this count:
+            if onlyMostCommon:
+                if entryCount > mostCommonCnt:
+                    break
+            if ngLen not in sortedFeatureHistogram:
+                sortedFeatureHistogram[ngLen] = {}
+            sortedFeatureHistogram[ngLen][key] = value
+        print("Length {}: removed {} / accepted {} feature strings for rotation".format(ngLen, rotationCnt, entryCount))
+            #print("-- {}: {}".format(key, value))
     
     versionStr = ''
     if onlyMostCommon:
