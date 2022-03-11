@@ -28,6 +28,7 @@ accidentalDict = {}
 #contains histogram of ngrams
 ngramDict = {}
 featureStrDict = {}
+featureStrStartingNotesDict = {}
 
 totFileCnt = len(fileList)
 fileCnt = 1
@@ -62,16 +63,22 @@ def generate_featurestring_ngram(intervalInfoSequence, ngram=1):
         featureChar = getFeatureChar(interval)
         intervalInfo['featureChar'] = featureChar
     temp = zip(*[intervalInfoSequence[i:] for i in range(0,ngram)])
-    charList = []
-    noteList = []
-    intervalList = []
+    charListList = []
+    noteListList = []
+    intervalListList = []
     for ngram in temp:
+        charList = []
+        noteList = []
+        intervalList = []
         for info in ngram:
             #print(info)
             charList.append(info['featureChar'])
             noteList.append(info['startNote'])
             intervalList.append(info['interval'])
-    return (charList, noteList, intervalList) 
+        charListList.append(charList)
+        noteListList.append(noteList)
+        intervalListList.append(intervalList)
+    return (charListList, noteListList, intervalListList)
 
 def are_rotations(str1, str2):
     if len(str1) != len(str2):
@@ -141,8 +148,8 @@ def getFeatureChar(interval):
         return("X")
     
 # analyze only these makam names:
-makamNames = ['rast', 'acemasiran', 'acemkurdi', 'beyati', 'buselik', 'hicaz', 'huseyni', 'huzzam', 'kurdilihicazkar', 'nihavent']
-#makamNames = ['rast']
+#makamNames = ['rast', 'acemasiran', 'acemkurdi', 'beyati', 'buselik', 'hicaz', 'huseyni', 'huzzam', 'kurdilihicazkar', 'nihavent']
+makamNames = ['rast']
 
 # DERIVE From music21.note mutherfucker
 #class makamNote(M.note):
@@ -272,12 +279,13 @@ for makamName in makamNames:
             #print("finding ngrams of length {}".format(ngramLength))
 
             # create ngrams of feature strings:
-            (charList, noteList, intervalList) = generate_featurestring_ngram(intervalInfoList, ngramLength)
-            print("found: {} ngrams ({}-{}-{})".format(len(charList), len(charList), len(noteList), len(intervalList)))
+            (charListList, noteListList, intervalListList) = generate_featurestring_ngram(intervalInfoList, ngramLength)
+            #print("found: {} ngrams ({}-{}-{})".format(len(charList), len(charList), len(noteList), len(intervalList)))
 
 
             #sum the occurance of each n-gram
-            for idx, ng in enumerate(charList):
+            for idx, ng in enumerate(charListList):
+                #print("idx {}, charList {}".format(idx, charList))
                 featureStr = convertListToStr(ng) 
                 if ngramLength not in featureStrDict:
                     featureStrDict[ngramLength] = {}
@@ -286,9 +294,20 @@ for makamName in makamNames:
                 else:
                     featureStrDict[ngramLength][featureStr] += 1
 
+                # featureStrStartingNotesDict["<feature string>"] = <list of <music21.notes>>
+                # contains the starting note for each of the feature strings!
+                if featureStr not in featureStrStartingNotesDict:
+                    featureStrStartingNotesDict[featureStr] = []
+                # note: this returns a fractions.Fraction object!
+                featureOffset = float(noteListList[idx][0].offset)
+                featureStrStartingNotesDict[featureStr].append(featureOffset)
+                print("feature string: {} at offset {}".format(featureStr, featureOffset))
+
         fileCnt += 1
 
         #print(featureStrDict) 
+        #print("~~~~~~~~~")
+        #print(featureStrStartingNotesDict)
         #if (fileCnt > 10):
         #     break
 
@@ -342,5 +361,13 @@ for makamName in makamNames:
     jsonPath = os.path.join(jsonDir, jsonFile) 
     with open(jsonPath, "w") as outfile:
         json.dump(sortedFeatureHistogram, outfile, indent=4)
+        print("wrote ngram counts to {}".format(jsonPath))
+
+    startingNoteFile = "{}_startingNotes{}.json".format(makamName, versionStr)
+    startingNotePath = os.path.join(jsonDir, startingNoteFile)
+    with open(startingNotePath, 'w') as outfile:
+        json.dump(featureStrStartingNotesDict, outfile, indent=4)
+        print("wrote starting notes to {}".format(startingNotePath))
+    print("adeu")
 
 
