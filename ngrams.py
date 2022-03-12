@@ -116,6 +116,31 @@ alterDict = {
         'slash-sharp': slashSharpAlter,
         'half-sharp': quarterSlashSharpAlter
         }
+
+
+# sharpAlter = 4 HC
+# slashSharpAlter = 5 HC
+# doubleSlashSharpAlter = 8 HC
+# tone = 9 HC
+
+scale = {'C':0, 'D':200, 'E':400, 'F':500, 'G':700, 'A':900, 'B':1100}
+
+# cin based on ascending
+ascendingDict = { # in cents
+    'tetra-cargah': [tone,tone,sharpAlter], # HC: 9,9,4
+    'penta-cargah': [tone,tone,sharpAlter,tone], # HC: 9,9,4,9
+    'tetra-buselik': [tone,sharpAlter,tone], # HC: 9,4,9
+    'penta-buselik': [tone,sharpAlter,tone,tone], # HC: 9,4,9
+    'tetra-kurdi': [sharpAlter,tone,tone], # HC: 4,9,9
+    'penta-kurdi': [sharpAlter,tone,tone,tone], #HC: 4,9,9,9
+    'tetra-ussak': [doubleSlashSharpAlter,slashSharpAlter,tone], #HC: 8,5,9
+    'penta-ussak': [doubleSlashSharpAlter,slashSharpAlter,tone,tone], #HC: 8,5,9,9
+    'tetra-hicaz': [slashSharpAlter,tone+sharpAlter,slashSharpAlter], #HC: 5,12,5
+    'penta-hicaz': [slashSharpAlter,tone+sharpAlter,slashSharpAlter,tone], #HC: 5,12,5,9
+    'tetra-rast': [tone,doubleSlashSharpAlter,slashSharpAlter], #HC: 9,8,5
+    'penta-rast': [tone,doubleSlashSharpAlter,slashSharpAlter,tone] #HC: 9,8,5,9
+}
+
 '''
 A feature string of a sequence of notes is made from the characters {R, U, W, D, B}.:
     R denotes a repeated note
@@ -148,8 +173,8 @@ def getFeatureChar(interval):
         return("X")
     
 # analyze only these makam names:
-#makamNames = ['rast', 'acemasiran', 'acemkurdi', 'beyati', 'buselik', 'hicaz', 'huseyni', 'huzzam', 'kurdilihicazkar', 'nihavent']
-makamNames = ['rast']
+makamNames = ['rast', 'acemasiran', 'acemkurdi', 'beyati', 'buselik', 'hicaz', 'huseyni', 'huzzam', 'kurdilihicazkar', 'nihavent']
+#makamNames = ['rast']
 
 # DERIVE From music21.note mutherfucker
 #class makamNote(M.note):
@@ -181,12 +206,13 @@ for makamName in makamNames:
 
         try:
             s = M.converter.parse(path)
-
+            fileNotParsedByMusic21 = False
             #print('This score {} contains these {} elements'.format(f, len(s.elements)))
             #for element in s.elements:
             #    print('-', element)
         
         except Exception as e:
+            fileNotParsedByMusic21 = True
             print("error reading {}: {}\n--> going to raw-dog the xml".format(f, e.args))
         
             tree = ET.parse(path)
@@ -224,6 +250,11 @@ for makamName in makamNames:
         #print('This score contains these {} elements'.format(len(s.elements)))
         #for element in s.elements:
         #    print('-', element)
+
+        if fileNotParsedByMusic21:
+            musicXmlScorePath = newPath
+        else:
+            musicXmlScorePath = path
 
         allNotes = s.flat.notes.stream()
         #print("element count: {}".format(len(allNotes.elements)))
@@ -279,9 +310,11 @@ for makamName in makamNames:
             #print("finding ngrams of length {}".format(ngramLength))
 
             # create ngrams of feature strings:
+            # charListList is a list of characters that make up a feature string
+            # noteListList is the note in the music21 score that each of the feature characters starts with
+            # intervalListList is the corresponding interval in cents
             (charListList, noteListList, intervalListList) = generate_featurestring_ngram(intervalInfoList, ngramLength)
-            #print("found: {} ngrams ({}-{}-{})".format(len(charList), len(charList), len(noteList), len(intervalList)))
-
+            print("found: {} ngrams of length {}".format(len(charListList), ngramLength))
 
             #sum the occurance of each n-gram
             for idx, ng in enumerate(charListList):
@@ -300,11 +333,12 @@ for makamName in makamNames:
                     featureStrStartingNotesDict[featureStr] = []
                 # note: this returns a fractions.Fraction object!
                 featureOffset = float(noteListList[idx][0].offset)
-                featureStrStartingNotesDict[featureStr].append(featureOffset)
-                print("feature string: {} at offset {}".format(featureStr, featureOffset))
+                featureStrStartingNotesDict[featureStr].append( (featureOffset, musicXmlScorePath) )
+                #print("feature string: {} at offset {} in file {}".format(featureStr, featureOffset, f))
 
         fileCnt += 1
 
+        # here, 
         #print(featureStrDict) 
         #print("~~~~~~~~~")
         #print(featureStrStartingNotesDict)
@@ -336,7 +370,7 @@ for makamName in makamNames:
                         # value += value2
                         reversedAndSorted.remove((key2,value2))
                         rotationCnt += 1
-                        #print("rotation!: {} -- {}: {}+{}={}".format(key, key2, value-value2, value2, value))
+                        # print("rotation!: {} -- {}: {}+{}={}".format(key, key2, value-value2, value2, value))
 
             entryCount += 1
             # to only keep entries above this count:

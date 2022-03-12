@@ -4,7 +4,7 @@ import os
 import sys
 import json
 import music21 as M
-
+import os.path
 
 
 if __name__ == "__main__":
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     #parser.add_argument(
 
     #default...
-    show = False
+    showScore = True 
     if len(sys.argv) < 3:
         ngramJson = 'json/rast_ngrams_top500_no_redundant.json'
         startingNotesJson = 'json/rast_startingNotes_top500_no_redundant.json'
@@ -23,6 +23,7 @@ if __name__ == "__main__":
         ngramJson = sys.argv[1]
         startingNotesJson = sys.argv[2]
 
+    
     with open(ngramJson, 'r') as f:
         ngrams = json.load(f)
 
@@ -30,7 +31,7 @@ if __name__ == "__main__":
         startingNotes = json.load(f)
 
     # use n = 9
-    for n in range(7, 15):
+    for n in range(10, 11):
         n = str(n)
         print(max(ngrams[n], key=ngrams[n].get))
 
@@ -48,6 +49,8 @@ if __name__ == "__main__":
             fileOffsetDict[filename].append(offset)
         
 
+        # now go through the files mentioned in fileOffsetDict,
+        # and highlight the spots where the mostCommonFeatStr occurs
         startingPitchHistogram = {}
         for filepath in fileOffsetDict:
             featureStrOffsets = fileOffsetDict[filepath]
@@ -62,9 +65,13 @@ if __name__ == "__main__":
             allNotes = s.flat.notes.stream()
            
             # what note is this
+            featStrCnt = len(featureStrOffsets)
+            
+            print("found {} occurances of {} in {}".format(featStrCnt, mostCommonFeatStr, filepath))
             for offset in featureStrOffsets:
                 sOut = allNotes.getElementsByOffset(offset)
                 # sOut is the first note of the ngram
+
                 for element in sOut:
                     p = element.pitch
                     print('starting pitch ------> {}'.format(element.pitch))
@@ -77,16 +84,28 @@ if __name__ == "__main__":
                     element.style.color = 'red'
                     nextNote = element
                     while noteCnt > 0:
-                        nextNote = nextNote.next('Note')
-                        nextNote.style.color = 'red'
+                        try:
+                            nextNote = nextNote.next('Note')
+                            nextNote.style.color = 'red'
+                        except Exception as e:
+                            print("problem getting next note: {}".format(e.args))
                         noteCnt -= 1
-                    print("next: {}".format(element.next('Note')))
-            if True:
+            
+            if showScore and featStrCnt > 6:
                 try:
+
+                    ###########
+                    #FIXME:
+                    ##pdfDir = 'pdf'
+                    #basename = os.path.basename(filepath)
+                    #pdfFileName = os.path.splitext(basename)[0] + '.pdf'
+                    #print("writing {}".format(os.path.join(pdfDir, pdfFileName)))
+                    #s.write(pdfFileName, pdfDir)
+                    ################
                     s.show()
                     input("press enter to continue...")
                 except Exception as e:
-                    print("error showing")
+                    print("error showing: {}".format(e.args))
 
         for pitch in startingPitchHistogram:
             print("for n={}; feature {} starts on: pitch: {}; cnt {}".format(n, mostCommonFeatStr, pitch, startingPitchHistogram[pitch]))
